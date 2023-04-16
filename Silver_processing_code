@@ -1,0 +1,140 @@
+import processing.net.*;
+import controlP5.*;
+
+//gui object
+ControlP5 cp5;
+//server objects
+Client myClient;//motor contol
+Client myClient2; //obstacle detection
+Client myClient3;//buggy velocity
+Client myClient4; // object velocity
+
+String data2 = "   ";
+String data3 = "    ";
+
+
+String buggy_velocity = "  ";
+String obj_velocity = " ";
+
+Textarea myTextarea;//output location for obstacle
+Println console;//makes the text box the console
+
+
+PFont font;//font objects
+PFont controlFont;
+PFont controlFont2;
+PFont controlFont3;
+
+void setup() {
+  
+  size(400,600);
+  smooth();
+  noStroke();
+  
+  //initialising GUI
+  cp5 = new ControlP5(this);
+  
+  //initialising fonts
+  font = createFont("calibri light", 30);
+  controlFont = createFont("calibri light", 20);
+  controlFont2 = createFont("calibri light", 16);
+  controlFont3 = createFont("calibri light", 12);
+  
+  //initialising the clients
+  myClient = new Client(this, "192.168.15.99", 80);//
+  myClient2 = new Client(this, "192.168.15.99", 01);
+  myClient3 = new Client(this, "192.168.15.99", 02);
+  myClient4 = new Client(this, "192.168.15.99", 03);
+ 
+ //creating text area      
+ myTextarea = cp5.addTextarea("Processing Output")
+                .setPosition(143,353)
+                .setSize(110,25)
+                .setFont(createFont("arial",12))
+                .setLineHeight(10)
+                .setColorBackground(color(255,255,255))
+                .setColor(color(0))
+                ;
+
+ 
+   cp5.addButton("stop")
+     .setValue(0)
+     .setPosition(80, 100)
+     .setSize(100, 60);
+
+  cp5.addButton("start")
+     .setValue(0)
+     .setPosition(220, 100)
+     .setSize(100, 60);
+
+  //giving the text area the consol output   
+  console = cp5.addConsole(myTextarea);   
+  background(51);
+
+}
+
+void draw() {
+  
+  background(0);
+  font = createFont("calibri light", 30); 
+ 
+   textFont(font);
+   
+   
+   text("Buggy Controls", 55, 75);
+  
+   //console box title
+   fill(color(255,255,255));
+   textFont(controlFont2);
+   text("Obstacle Detected: ", 138, 345);
+   
+   
+   String data2 = myClient3.readStringUntil('\n');   
+   if(data2 != null){
+   buggy_velocity = data2;
+   }
+   
+   text("Velocity of Buggy: " + buggy_velocity, 100,500 );
+   
+   
+   String data3 = myClient4.readStringUntil('\n');
+   if(data3 != null){
+   obj_velocity = data3;
+   }
+   
+   text("Velocity of Object: " + obj_velocity, 100, 400 );
+   
+   //obstabcle
+   if (myClient2.active())//checks for correct server
+   {
+      char data = myClient2.readChar();
+    switch(data){
+       case('1'):
+         println("Object Detected");
+         break;
+     
+    
+ }
+}
+delay(100);
+   }
+//communicates with buggy via motor control server
+public void stop(int Value){
+    if (myClient.active())
+  {
+   myClient.write(Value);//sends this value to the server
+  // println("stop");
+  }
+
+}
+
+
+public void start(int value) {
+  myClient.write('C');
+  //println("start");
+}
+
+
+
+
+
