@@ -1,0 +1,293 @@
+#include <WiFiNINA.h>
+
+char ssid[] = "DELL";
+char pass[] = "ayale123";
+WiFiClient client;
+IPAddress server(192, 168, 137, 156);
+
+char cmd = 'C';
+
+//setting fixed speeds
+int start_speed = 125;
+int stop_speed = 0;
+int slow_turn = 75;
+int fast_turn = 200;
+
+//motor pins
+int LM_forward = 4;    //pin 2 on h bridge
+int LM_backward = 3;    //pin 7 on h bridge
+int RM_backward = 5;    //pin 15 on h bridge
+int RM_forward = 6;    //pin 10 on h bridge
+
+//IR Control
+const int LEYE = 2;
+const int REYE = 12;
+
+//speed pins
+const int LM_speed = 19;
+const int RM_speed = 17;
+
+//ultrasonic
+const int US_TRIG = 7;
+const int US_ECHO = 8;
+
+//ultrasonic eqn
+float duration;
+int distance;//convenience for outputting
+
+//PID computed via tuning
+double kp = (1/7.3);
+double ki = 1/20;
+double kd = 2;
+
+//PID variables
+unsigned long currentTime, previousTime;
+double elapsedTime;
+double error;
+double lastError;
+const double setPoint = 15;
+double cumError, rateError;
+double Speedvalue;
+
+void setup() {
+  Serial.begin(9600);
+
+  // Connect to Wi-Fi network
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, pass);
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting...");
+  }
+  
+  Serial.println("Connected to Wi-Fi");
+  
+  client.connect(server, 5200);
+  
+  if (client.connected()) {
+    Serial.println("Connected to server");
+    client.write("Hello server");
+  } else {
+    Serial.println("Connection to server failed");
+  }
+  
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Adress: ");
+  Serial.println(ip);
+ 
+  //set-up ultra
+  pinMode(US_TRIG, OUTPUT);
+  pinMode(US_ECHO, INPUT);
+  //set up motor pins
+  pinMode(LM_forward, OUTPUT );
+  pinMode(LM_backward, OUTPUT );
+  pinMode(RM_backward, OUTPUT );
+  pinMode(RM_forward, OUTPUT );
+ 
+  //ir set-up
+  pinMode( REYE, INPUT);
+  pinMode( LEYE, INPUT);
+}
+
+void loop() {
+   if (client.connected()) {
+    if (client.available()) {
+      char c = client.read();
+      if (isAlpha(c)) {
+        cmd = c;
+        Serial.println(cmd);
+      }
+    }
+    //client.write("Hello Client");
+
+   // execute the appropriate action based on the current command
+    if (cmd == 'A') {
+      // follow echoes if the command is 'A'
+      echo_follow();
+    } else if (cmd == 'C') {
+      // stop the buggy if the command is 'C'
+      stop();
+    }
+  } else {
+    // if the client is not connected, try to reconnect
+    client.stop();
+    WiFi.begin(ssid, pass);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    client.connect(server, 5200);
+  }
+}
+
+void echo_follow() {
+  //trigger on for 2 seconds
+  digitalWrite(US_TRIG, LOW);
+  delayMicroseconds(2);
+
+  //detecting sound for 10 seconds
+  digitalWrite(US_TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(US_TRIG, LOW);
+
+  duration = pulseIn(US_ECHO, HIGH);
+  distance = duration / 58;
+
+  Speedvalue = computePID(distance);//for compoting speed variable based on pid and distance from object
+  drive(distance, Speedvalue);//actual speed value is computed in drive function
+}
+
+
+//PID Functions
+double computePID(double inp){     
+    currentTime = millis();  //get current time
+    elapsedTime = (double)(currentTime - previousTime); //compute time elapsed from previous computation
+    
+    error = (setPoint - inp);// determine error
+    cumError += error * elapsedTime;// compute integral
+    rateError = (error - lastError)/elapsedTime;// compute derivative
+
+    double out = kp*error + ki*cumError + kd*rateError;//PID output               
+
+    lastError = error;//remember current error
+    previousTime = currentTime; //remember current time
+  
+    return out;//have function return the PID Result
+}
+
+//functions for drive control
+void start(int L, int R){
+  analogWrite(LM_forward, L );
+  analogWrite(LM_backward, stop_speed);
+  analogWrite(RM_backward, stop_speed);
+  analogWrite(RM_forward, R);
+}
+
+void stop(){
+  analogWrite(LM_forward, stop_speed);
+  analogWrite(LM_backward, stop_speed);
+  analogWrite(RM_backward, stop_speed);
+  analogWrite(RM_forward, stop_speed);
+}
+
+void right(){
+  analogWrite(LM_forward, fast_turn);
+  analogWrite(LM_backward, stop_speed);
+  analogWrite(RM_backward, stop_speed);
+  analogWrite(RM_forward, slow_turn); 
+}
+
+void left(){
+  analogWrite(LM_forward, slow_turn);
+  analogWrite(LM_backward, stop_speed);
+  analogWrite(RM_backward, stop_speed);
+  analogWrite(RM_forward, fast_turn); 
+}
+
+void slow(){
+  analogWrite(LM_forward, start_speed);
+  analogWrite(LM_backward, stop_speed);
+  analogWrite(RM_backward, stop_speed);
+  analogWrite(RM_forward, start_speed); 
+}
+
+void backward(int L, int R){
+  analogWrite(LM_forward, stop_speed);
+  analogWrite(LM_backward, L);
+  analogWrite(RM_backward, R);
+  analogWrite(RM_forward, stop_speed);
+}
+
+void slowbackward(){
+  analogWrite(LM_forward, stop_speed);
+  analogWrite(LM_backward, start_speed);
+  analogWrite(RM_backward, start_speed);
+  analogWrite(RM_forward, stop_speed);
+}
+
+void leftbackward(){
+  analogWrite(LM_forward, stop_speed);
+  analogWrite(LM_backward, slow_turn);
+  analogWrite(RM_backward, fast_turn);
+  analogWrite(RM_forward, stop_speed);
+}
+
+void rightbackward(){
+  analogWrite(LM_forward, stop_speed);
+  analogWrite(LM_backward, fast_turn);
+  analogWrite(RM_backward, slow_turn);
+  analogWrite(RM_forward, stop_speed);
+}
+
+
+
+
+void drive(int d, double s){
+  
+  int leye_initital_value = digitalRead(LEYE);
+  int reye_initital_value = digitalRead(REYE);
+  const int black = HIGH;
+  const int white = LOW;
+
+ int  Speed = 125 +125*abs(s);
+ 
+ if (Speed > 230)
+ {
+  Speed = 230;
+ }
+ if(reye_initital_value  == black && leye_initital_value == black){
+  Speed = 125;
+ }
+//  server2.write(Speed);//for voltmeter output
+ 
+ if(d > 15 && d != 0)
+ {
+
+   if(leye_initital_value == black && reye_initital_value == black)
+    {
+      start(Speed, Speed);//PID conrolled speeds
+    }
+     if(leye_initital_value == white && reye_initital_value == black)
+     {
+      right();
+      }
+     
+    if(leye_initital_value == black && reye_initital_value == white)
+    {
+     left();
+    }
+    
+    if(reye_initital_value  == white && leye_initital_value == white)
+    {
+     slow();
+    }
+    
+ }else if(d < 14 && d > 0){
+    
+   if(leye_initital_value == black && reye_initital_value == black)
+   {
+      backward(Speed, Speed);//PID controlled speeds
+   }
+   
+   if(leye_initital_value == white && reye_initital_value == black)
+   {
+      rightbackward();
+   }
+   if(leye_initital_value == black && reye_initital_value == white)
+   {
+     leftbackward();
+   }
+   if(reye_initital_value  == white && leye_initital_value == white)
+   {
+     slowbackward();
+   }
+ }
+ 
+ if( d > 14 && d < 16){
+    stop();
+   }
+}
+
+Use Bronze 2 processing
