@@ -1,0 +1,112 @@
+//setting infrared sensors to allocated pins
+// const int LEYE = 2;
+// const int REYE = 12;
+
+//Motor set up
+int LM_pin1 = 4;    //pin 2 on h bridge
+int LM_pin2 = 3;    //pin 7 on h bridge
+int RM_pin1 = 6;    //pin 10 on h bridge
+int RM_pin2 = 5;    //pin 15 on h bridge
+int LM_speed = 19;  //left motor speed control
+int RM_speed = 17;  //right motor speed control
+
+//setting fixed speeds
+int start_speed = 125;
+int stop_speed = 0;
+int slow_turn = 75;
+int fast_turn = 200;
+
+//setting ultrasonic sensors to allocated pins
+// const int US_TRIG = 7;
+// const int US_ECHO = 8;
+
+// long duration;
+// int distance;
+
+void Start() {
+  analogWrite(LM_pin1, start_speed);
+  analogWrite(LM_pin2, stop_speed);
+  analogWrite(RM_pin1, start_speed);
+  analogWrite(RM_pin2, stop_speed);
+}
+
+void right() {
+  analogWrite(LM_pin1, fast_turn);
+  analogWrite(LM_pin2, stop_speed);
+  analogWrite(RM_pin1, slow_turn);
+  analogWrite(RM_pin2, stop_speed);
+}
+
+void left() {
+  analogWrite(LM_pin1, slow_turn);
+  analogWrite(LM_pin2, stop_speed);
+  analogWrite(RM_pin1, fast_turn);
+  analogWrite(RM_pin2, stop_speed);
+}
+
+void Stop() {
+  analogWrite(LM_pin1, stop_speed);
+  analogWrite(LM_pin2, stop_speed);
+  analogWrite(RM_pin1, stop_speed);
+  analogWrite(RM_pin2, stop_speed);
+}
+
+// void go() {
+//   int leye_initital_value = digitalRead(LEYE);
+//   int reye_initital_value = digitalRead(REYE);
+//   const int black = HIGH;
+//   const int white = LOW;
+
+//   if (leye_initital_value == black && reye_initital_value == black) {
+//     Start();
+//   }
+//   if (leye_initital_value == white && reye_initital_value == black) {
+//     right();
+//   }
+//   if (leye_initital_value == black && reye_initital_value == white) {
+//     left();
+//   }
+// }
+
+// void echo_follow() {
+//   //trigger on for 2 seconds
+//   digitalWrite(US_TRIG, LOW);
+//   delayMicroseconds(2);
+
+//   //detecting sound for 10 seconds
+//   digitalWrite(US_TRIG, HIGH);
+//   delayMicroseconds(10);
+//   digitalWrite(US_TRIG, LOW);
+
+//   duration = pulseIn(US_ECHO, HIGH);
+//   distance = duration / 58;
+//   // Prints the distance on the Serial Monitor
+//   if (distance >= 10) {
+//     go();
+//   } else {
+//     Stop();
+//     delay(500);
+//   }
+// }
+
+void setup() {
+  Serial.begin(9600);  // Init Serial at 9600 Baud Rate.
+
+  // pinMode(LEYE, INPUT);
+  // pinMode(REYE, INPUT);
+
+  //turning on
+  pinMode(LM_pin1, OUTPUT);
+  pinMode(LM_pin2, OUTPUT);
+  pinMode(RM_pin1, OUTPUT);`
+  pinMode(RM_pin2, OUTPUT);
+
+  //ultra set up
+  // pinMode(US_TRIG, OUTPUT);
+  // pinMode(US_ECHO, INPUT);
+}
+
+void loop() {
+  Start();
+}
+
