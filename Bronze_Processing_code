@@ -1,0 +1,65 @@
+import controlP5.*;
+import processing.net.*;
+ControlP5 cp5;
+
+
+Server myServer;
+int c1, c2;
+String C;
+float n,n1;
+int myColor = color(255);
+
+void setup(){
+myServer = new Server(this, 5200);                                                                   
+cp5=new ControlP5(this);
+ size(400,600);
+ noStroke();
+println("hello world");
+
+cp5.addButton("go")
+     .setValue(0)
+     .setPosition(100,100)
+     .setSize(200,19)
+     ;
+cp5.addButton("stop")
+     .setValue(0)
+     .setPosition(100,140)
+     .setSize(200,19)
+     ;       
+     
+}
+
+void draw(){
+background(myColor);
+myColor = lerpColor(c1,c2,n);
+n += (1-n)* 0.1; 
+Client thisClient = myServer.available();
+  // If the client is not null, and says something, display what it said
+  if (thisClient !=null) {
+    String whatClientSaid = thisClient.readString();
+    if (whatClientSaid != null) {
+      println(whatClientSaid);
+      text(whatClientSaid, 100, 440, 280, 320);  // Text wraps within text box
+    }  
+  } 
+  
+}
+
+public void go(int theValue) {
+  println("a button event from colorA: "+theValue);
+  c1 = c2;
+  c2 = color(0,255,21);
+  myServer.write('A');
+  println("a");
+}
+
+// function colorB will receive changes from 
+// controller with name colorB
+public void stop(int theValue) {
+  println("a button event from colorB: "+theValue);
+  c1 = c2;
+  c2 = color(255,45,0);
+  myServer.write('C');
+  println("C");
+}
+
